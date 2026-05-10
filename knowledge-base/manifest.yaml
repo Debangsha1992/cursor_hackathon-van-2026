@@ -1,0 +1,150 @@
+# PaperPilot AI — Knowledge corpus manifest
+#
+# This file is the source of truth for what is indexed in Nia and how the
+# bot-coach should retrieve from it. The schema is intentionally explicit so
+# the same query routing logic survives a backend swap.
+#
+# Conventions:
+#   - Add a new entry under `sources` for every book/paper/note set added to the corpus.
+#   - `nia_source_id` is filled in by the indexer after Nia ingests the file.
+#   - `when_to_retrieve` describes the trigger conditions; the retriever ANDs
+#     within a rule and ORs across rules to decide whether to pull from this source.
+
+version: 1
+
+retrieval:
+  default_top_k: 4
+  default_mode: universal           # vector + BM25, no LLM synthesis from Nia
+  citation_format: "{authors_short} ({year}), {title_short}, p.{page}"
+  max_excerpt_chars: 600
+  always_include_citations: true
+
+sources:
+  - id: advances-fin-ml-de-prado-2018
+    title: Advances in Financial Machine Learning
+    title_short: Adv. Fin. ML
+    authors:
+      - Marcos López de Prado
+    authors_short: López de Prado
+    year: 2018
+    publisher: Wiley
+    license: copyrighted-do-not-redistribute
+    local_path: sources/advances-in-financial-machine-learning.pdf
+    pages: 393
+    nia_source_id: TBD              # filled after first index run
+    indexed_at: TBD
+    topical_tags:
+      - overfitting
+      - backtest_leakage
+      - data_structures
+      - meta_labeling
+      - feature_engineering
+      - cross_validation_purged_kfold
+      - hyperparameter_tuning
+      - strategy_robustness
+      - selection_bias_under_multiple_testing
+      - feature_importance
+    when_to_retrieve:
+      - violation_codes_present_any:
+          - BOT_OVERCONFIDENCE
+          - BOT_POOR_RISK_REWARD
+          - BOT_STRATEGY_MISMATCH
+      - context_indicates_overfitting_risk: true
+      - history_modifier_triggered: true     # repeating same code → likely overfit logic
+    summary: >
+      Canonical text on the unique pitfalls of applying machine learning to
+      financial data. Covers data structuring (volume bars, dollar bars, info-driven
+      bars), the triple-barrier labeling method, meta-labeling, purged k-fold and
+      embargoed cross-validation that account for serial dependence, and detection
+      of backtest overfitting under multiple testing. The primary reference for
+      evaluating whether a bot's apparent edge is statistically sound rather than
+      data-snooped.
+    informs_coach_sections:
+      - decisionReview
+      - strategyConsistency
+      - behaviorWarnings
+      - improvementSuggestions
+
+  - id: 151-trading-strategies-kakushadze-serur-2018
+    title: 151 Trading Strategies
+    title_short: 151 Trading Strategies
+    authors:
+      - Zura Kakushadze
+      - Juan Andrés Serur
+    authors_short: Kakushadze & Serur
+    year: 2018
+    publisher: SSRN working paper (3247865)
+    license: open-access-author-distributable
+    local_path: sources/151-trading-strategies.pdf
+    pages: 361
+    nia_source_id: TBD
+    indexed_at: TBD
+    topical_tags:
+      - strategy_taxonomy
+      - momentum
+      - mean_reversion
+      - trend_following
+      - breakout
+      - pairs_trading
+      - statistical_arbitrage
+      - volatility
+      - options_strategies
+      - asset_class_coverage
+    when_to_retrieve:
+      - always_for_strategy_consistency_check: true
+      - violation_codes_present_any:
+          - BOT_STRATEGY_MISMATCH
+          - BOT_MISSING_REASONING
+      - bot_declared_strategy_type_unfamiliar_to_default_prompt: true
+    summary: >
+      Comprehensive descriptive catalogue of 150+ trading strategies across asset
+      classes, with formulas and source code for backtesting. Reference for
+      verifying whether a bot's declared `strategyType` and natural-language
+      `signalReason` align with the canonical definition of that strategy.
+    informs_coach_sections:
+      - strategyConsistency
+      - decisionReview
+
+# How the retriever composes a query for the coach LLM.
+#
+# Inputs available at retrieval time:
+#   - trade.strategyType
+#   - trade.signalReason
+#   - trade.marketRegime
+#   - violation_codes[]
+#   - history_modifier.recurringCodes[]
+#   - profile.strategyType
+#
+# Query template (semantic, sent to Nia /v2/search?mode=universal):
+#   "{trade.strategyType} signal: {trade.signalReason}.
+#    Market regime: {trade.marketRegime}.
+#    Concerns: {violation_codes joined}.
+#    What does the literature say about (a) the canonical {strategyType}
+#    definition, (b) overfitting and selection bias when this pattern is used,
+#    and (c) appropriate risk controls?"
+query_composition:
+  template: |
+    {trade.strategyType} signal: {trade.signalReason}.
+    Market regime: {trade.marketRegime}.
+    Concerns: {violation_codes_joined}.
+    What does the literature say about (a) the canonical {trade.strategyType}
+    definition, (b) overfitting and selection bias when this pattern is used,
+    and (c) appropriate risk controls?
+  fallback_template: |
+    Trading strategy: {trade.strategyType}. Concerns: {violation_codes_joined}.
+    Provide canonical definitions, common pitfalls, and risk-control practices.
+
+# Forbidden retrieval-and-output behaviors. Enforced in coach prompts and
+# post-processing. These mirror .cursor/rules/financial-safety.md.
+guardrails:
+  forbidden_phrases_in_output:
+    - "ready for live"
+    - "deploy this bot"
+    - "guaranteed return"
+    - "buy this"
+    - "sell this"
+    - "you should go live"
+  required_disclaimer_in_output: >
+    PaperPilot AI evaluates paper-trading behavior only. It does not authorize
+    live trading.
+  citations_required_when_advice_given: true
