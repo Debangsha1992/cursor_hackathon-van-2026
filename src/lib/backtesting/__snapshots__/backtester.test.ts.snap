@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`backtester - golden test > produces a deterministic result for MA-crossover on the BTC fixture 1`] = `
+{
+  "totalReturn": 2,
+  "totalTrades": 1,
+  "tradesCount": 1,
+  "violationsCount": 0,
+  "winRate": 1,
+}
+`;

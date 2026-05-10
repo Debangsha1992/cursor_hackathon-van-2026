@@ -1,0 +1,11 @@
+Internal UI source brief - the original shadcn/efferd hero + header reference snippets used to build the marketing site. Replaced in production by:
+
+- src/components/ui/hero.tsx
+- src/components/ui/header.tsx
+- src/components/ui/navigation-menu.tsx
+- src/components/ui/menu-toggle-icon.tsx
+- src/components/ui/button.tsx
+- src/components/ui/paperpilot-logo.tsx
+- src/components/ui/theme-toggle.tsx
+
+Kept as a placeholder to preserve directory shape; the original was a verbatim copy of upstream component source already pushed in batch 2 above.
