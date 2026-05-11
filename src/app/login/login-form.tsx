@@ -10,9 +10,10 @@ import { signInAction } from "../auth/actions";
 
 type Props = {
   initialError?: string;
+  next?: string;
 };
 
-export function LoginForm({ initialError }: Props) {
+export function LoginForm({ initialError, next }: Props) {
   const [error, setError] = useState<string | undefined>(initialError);
   const [isPending, startTransition] = useTransition();
 
@@ -31,6 +32,7 @@ export function LoginForm({ initialError }: Props) {
       action={onSubmit}
       className="flex flex-col gap-4 rounded-lg border border-border/60 bg-card/40 p-6"
     >
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
         <Input
