@@ -39,7 +39,9 @@ export default async function SignupPage({ searchParams }: PageProps) {
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               Spin up bots, audit their paper trades against your declared
-              policy, and own the data. No live execution, ever.
+              policy, and own the data. No live execution, ever. Accounts are
+              activated immediately — you&apos;ll be signed in and dropped on
+              the dashboard once you submit.
             </p>
           </header>
 

@@ -1,12 +1,27 @@
+import { redirect } from "next/navigation";
+
 import { Header } from "@/components/ui/header";
 import { MarketPanel } from "@/components/dashboard/market-panel";
 import { ChatPanel } from "@/components/dashboard/chat-panel";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "Dashboard — PaperPilot AI",
 };
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  // Gate the audit feed behind auth. Unauthenticated visitors bounce to the
+  // login screen with ?next=/dashboard so the server action can route them
+  // back here after they sign in. They can pivot to /signup from the link
+  // at the bottom of the login form if they don't have an account yet.
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login?next=/dashboard");
+  }
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header />

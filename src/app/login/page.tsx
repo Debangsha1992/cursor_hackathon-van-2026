@@ -42,7 +42,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
             </p>
           </header>
 
-          <LoginForm initialError={params.error} />
+          <LoginForm initialError={params.error} next={params.next} />
 
           <p className="mt-6 text-sm text-muted-foreground">
             New here?{" "}
