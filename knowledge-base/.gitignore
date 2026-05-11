@@ -1,0 +1,11 @@
+# Source PDFs and ebooks are kept locally only. Many are copyrighted and
+# may not be redistributed via the repository. The `manifest.yaml` and
+# `notes/` files are the committed contract; the source files themselves
+# are reconstructed locally by the maintainer.
+sources/*.pdf
+sources/*.epub
+sources/*.mobi
+
+# Large extracted-text dumps used during development
+sources/_extracted/
+notes/_drafts/
