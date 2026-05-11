@@ -5,6 +5,8 @@ import { createInMemoryOrderBook } from "@/lib/market/orderBook";
 import type { Manifest } from "@/lib/corpus/manifestLoader";
 import type { NiaClient } from "@/lib/corpus/niaRetriever";
 import type { MarketEvent } from "@/lib/market/types";
+import type { ScoreBand } from "@/lib/trading/scoreCalculator";
+import type { StrategyType } from "@/lib/trading/types";
 import { createMarketEventBus, type MarketEventBus } from "./eventBus";
 import type { PaperPilotRepo } from "./handlers";
 import type { TaskValue } from "./envelope";
@@ -12,12 +14,34 @@ import type { TaskValue } from "./envelope";
 // Bounded ring buffer of recent market events, exposed to the dashboard via
 // `/api/dashboard/market`. Keeps the hackathon demo alive on first paint.
 const MAX_HISTORY = 100;
+const MAX_AUDIT_HISTORY = 200;
+
 export interface MarketHistory {
   record(event: MarketEvent): void;
   recent(): MarketEvent[];
   pendingInterrupts(): Array<{ taskId: string; botId: string; reason: string }>;
   recordInterrupt(entry: { taskId: string; botId: string; reason: string }): void;
   clearInterrupt(taskId: string): void;
+}
+
+// Per-bot audit results emitted by `auditPipeline.auditTrade`. The TradingView
+// webhook routes record into this buffer after every successful audit so the
+// `/api/dashboard/scorecards` endpoint can show real per-bot history without
+// running the pipeline again on the read path. Capacity is process-local —
+// the same caveat that already applies to MarketHistory.
+export interface AuditEntry {
+  ts: number;
+  botId: string;
+  score: number;
+  band: ScoreBand;
+  violationCodes: string[];
+  strategyType: StrategyType;
+  symbol?: string;
+}
+
+export interface AuditHistory {
+  recordAudit(entry: AuditEntry): void;
+  recentAudits(opts?: { botId?: string; limit?: number }): AuditEntry[];
 }
 
 function createMarketHistory(): MarketHistory {
@@ -43,6 +67,25 @@ function createMarketHistory(): MarketHistory {
   };
 }
 
+function createAuditHistory(): AuditHistory {
+  const entries: AuditEntry[] = [];
+  return {
+    recordAudit(entry) {
+      entries.push(entry);
+      if (entries.length > MAX_AUDIT_HISTORY) entries.shift();
+    },
+    recentAudits(opts) {
+      const filtered = opts?.botId
+        ? entries.filter((e) => e.botId === opts.botId)
+        : entries.slice();
+      if (typeof opts?.limit === "number" && opts.limit >= 0) {
+        return filtered.slice(-opts.limit);
+      }
+      return filtered;
+    },
+  };
+}
+
 // Module-level singleton runtime. The Next.js dev/build environment may
 // import this from multiple route modules; a single instance keeps the order
 // book and event bus shared across them.
@@ -52,6 +95,7 @@ export interface A2ARuntime {
   eventBus: MarketEventBus;
   repo: PaperPilotRepo;
   history: MarketHistory;
+  auditHistory: AuditHistory;
   orderBook: ReturnType<typeof createInMemoryOrderBook>;
   nextId: () => string;
   now: () => number;
@@ -78,6 +122,7 @@ export function getOrCreateA2ARuntime(opts: BuildRuntimeOpts): A2ARuntime {
   const orderBook = createInMemoryOrderBook({ now, nextId });
   const eventBus = createMarketEventBus();
   const history = createMarketHistory();
+  const auditHistory = createAuditHistory();
 
   // Tee events from the bus into the history ring buffer.
   (async () => {
@@ -102,6 +147,7 @@ export function getOrCreateA2ARuntime(opts: BuildRuntimeOpts): A2ARuntime {
     eventBus,
     repo: opts.repo,
     history,
+    auditHistory,
     orderBook,
     nextId,
     now,
@@ -112,6 +158,28 @@ export function getOrCreateA2ARuntime(opts: BuildRuntimeOpts): A2ARuntime {
 // Used only by tests that want a fresh runtime.
 export function __resetA2ARuntime() {
   runtimeSingleton = null;
+}
+
+// Convenience accessor for callers that only need access to the singleton's
+// in-memory state (history / auditHistory / pending interrupts) and don't
+// care about Nia or the coach LLM. Used by the dashboard and the TradingView
+// webhooks. The first hit through the regular dashboard path may have already
+// supplied real I/O deps; this helper just bootstraps with stubs if not.
+export function getOrCreateA2ARuntimeWithStubs(): A2ARuntime {
+  return getOrCreateA2ARuntime({
+    niaClient: { async search() { return []; } },
+    coach: {
+      async narrate() {
+        return {
+          prose: "",
+          excerpts: [],
+          llmFallbackUsed: true,
+          llmLatencyMs: 0,
+        };
+      },
+    },
+    repo: createInMemoryRepo(),
+  });
 }
 
 // Manifest is optional at boot — if absent the niaRetriever returns empty

@@ -41,7 +41,7 @@ const stripCursorRefsScript = `
 export const metadata: Metadata = {
   title: "PaperPilot AI — Behavior audits for AI trading agents",
   description:
-    "PaperPilot AI grades whether your AI trading agent obeys the rules it claims to follow. Deterministic compliance scoring, explicit violation codes, and a persistent paper-trading audit log. No live execution, ever.",
+    "PaperPilot AI grades whether your AI trading agent obeys the rules it claims to follow. Deterministic bot scoring, explicit violation codes, and a persistent paper-trading audit log. No live execution, ever.",
   metadataBase: new URL("https://paperpilot.ai"),
 };
 

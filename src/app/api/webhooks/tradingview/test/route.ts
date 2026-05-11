@@ -3,6 +3,7 @@ import { parseTradingViewAlert } from "@/lib/adapters/tradingViewAdapter";
 import { auditTrade } from "@/lib/trading/auditPipeline";
 import { getAuditDeps } from "@/lib/trading/auditRuntime";
 import { getGlobalRegistry } from "@/lib/bots/registry";
+import { getOrCreateA2ARuntimeWithStubs } from "@/lib/a2a/runtime";
 import type { BotPaperTrade } from "@/lib/trading/types";
 
 export const runtime = "nodejs";
@@ -134,6 +135,23 @@ export async function POST(request: Request): Promise<NextResponse> {
     },
     getAuditDeps()
   );
+
+  // Surface the audit on the dashboard scorecards. Same best-effort contract
+  // as the production webhook above.
+  try {
+    const rt = getOrCreateA2ARuntimeWithStubs();
+    rt.auditHistory.recordAudit({
+      ts: rt.now(),
+      botId: body.botId,
+      score: result.score.score,
+      band: result.score.band,
+      violationCodes: result.violations.map((v) => v.code),
+      strategyType: result.trade.strategyType,
+      symbol: result.trade.symbol,
+    });
+  } catch {
+    // ignored on purpose
+  }
 
   return NextResponse.json(
     {

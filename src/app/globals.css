@@ -88,3 +88,71 @@
   mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, black, transparent);
   -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, black, transparent);
 }
+
+/* ---------------------------------------------------------------------------
+ * Prompt box token layer
+ *
+ * Dedicated tokens for `src/components/ui/ai-prompt-box.tsx` so the composer
+ * can keep the original "command bar" feel in dark mode and a clean paper
+ * feel in light mode without polluting the project-wide shadcn tokens.
+ * Read inside the component as `bg-[hsl(var(--prompt-bg))]`,
+ * `shadow-[var(--prompt-shadow)]`, etc.
+ * ---------------------------------------------------------------------------
+ */
+@layer base {
+  :root {
+    --prompt-bg: 0 0% 100%;
+    --prompt-border: 220 13% 88%;
+    --prompt-elevated: 220 14% 96%;
+    --prompt-fg: 222 47% 11%;
+    --prompt-muted: 220 9% 46%;
+    --prompt-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+    --prompt-send-bg: 222 47% 16%;
+    --prompt-send-fg: 40 33% 98%;
+  }
+  .dark {
+    --prompt-bg: 222 47% 7%;
+    --prompt-border: 222 18% 22%;
+    --prompt-elevated: 222 32% 12%;
+    --prompt-fg: 40 33% 96%;
+    --prompt-muted: 220 9% 65%;
+    --prompt-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+    --prompt-send-bg: 40 33% 96%;
+    --prompt-send-fg: 222 47% 11%;
+  }
+}
+
+/*
+ * CSS keyframe for the voice-recorder visualizer in the prompt box. Each bar
+ * gets its own animation-duration / animation-delay so the wave looks alive
+ * without React re-rendering on every frame.
+ */
+@keyframes prompt-bar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/*
+ * Focus + scrollbar polish. Lives outside @layer so it always wins specificity
+ * against component utility classes.
+ */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

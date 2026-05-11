@@ -2,6 +2,10 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { POST } from "./route";
 import { POST as TEST_POST } from "./test/route";
 import { __resetGlobalRegistry, getGlobalRegistry } from "@/lib/bots/registry";
+import {
+  __resetA2ARuntime,
+  getOrCreateA2ARuntimeWithStubs,
+} from "@/lib/a2a/runtime";
 
 const HACKATHON_USER_ID = "demo_user";
 
@@ -52,6 +56,7 @@ function makeRequest(body: string): Request {
 
 beforeEach(() => {
   __resetGlobalRegistry();
+  __resetA2ARuntime();
 });
 
 describe("POST /api/webhooks/tradingview - happy path", () => {
@@ -87,6 +92,51 @@ describe("POST /api/webhooks/tradingview - happy path", () => {
     };
     expect(data.trade.source).toBe("tradingview_webhook");
     expect(data.trade.trust_tier).toBe("shared_secret");
+  });
+});
+
+describe("POST /api/webhooks/tradingview - audit history side-effect", () => {
+  it("records the audit into the runtime's auditHistory ring buffer", async () => {
+    const created = await createBot();
+    const before = getOrCreateA2ARuntimeWithStubs().auditHistory.recentAudits({
+      botId: created.record.profile.botId,
+    });
+    expect(before).toEqual([]);
+
+    const body = buildPayload({
+      webhookSecret: created.record.tradingviewSharedSecret,
+      botId: created.record.profile.botId,
+    });
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+
+    const after = getOrCreateA2ARuntimeWithStubs().auditHistory.recentAudits({
+      botId: created.record.profile.botId,
+    });
+    expect(after).toHaveLength(1);
+    expect(after[0].score).toBe(100);
+    expect(after[0].band).toBe("Exemplary");
+    expect(after[0].violationCodes).toEqual([]);
+    expect(after[0].symbol).toBe("BTCUSDT");
+    expect(after[0].strategyType).toBe("trend_following");
+  });
+
+  it("records a violation-bearing audit with the matching code", async () => {
+    const created = await createBot();
+    const body = buildPayload({
+      webhookSecret: created.record.tradingviewSharedSecret,
+      botId: created.record.profile.botId,
+      override: { stopLoss: undefined },
+    });
+    const res = await POST(makeRequest(body));
+    expect(res.status).toBe(200);
+
+    const after = getOrCreateA2ARuntimeWithStubs().auditHistory.recentAudits({
+      botId: created.record.profile.botId,
+    });
+    expect(after).toHaveLength(1);
+    expect(after[0].violationCodes).toContain("BOT_NO_STOP_LOSS");
+    expect(after[0].score).toBeLessThan(100);
   });
 });
 
@@ -231,5 +281,22 @@ describe("POST /api/webhooks/tradingview/test - synthetic payload runner", () =>
   it("returns 400 when botId is missing", async () => {
     const res = await TEST_POST(makeTestRequest({ variant: "clean" }));
     expect(res.status).toBe(400);
+  });
+
+  it("records the synthetic audit into the runtime's auditHistory", async () => {
+    const created = await createBot();
+    const res = await TEST_POST(
+      makeTestRequest({
+        botId: created.record.profile.botId,
+        variant: "no_stop_loss",
+      })
+    );
+    expect(res.status).toBe(200);
+
+    const after = getOrCreateA2ARuntimeWithStubs().auditHistory.recentAudits({
+      botId: created.record.profile.botId,
+    });
+    expect(after).toHaveLength(1);
+    expect(after[0].violationCodes).toContain("BOT_NO_STOP_LOSS");
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { createPortal } from "react-dom";
+import Link from "next/link";
 import {
   ActivityIcon,
   BarChart3Icon,
@@ -66,13 +66,13 @@ export function Header() {
     >
       <nav className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-5">
-          <a
-            href="#"
+          <Link
+            href="/"
             className="hover:bg-accent rounded-md p-2 -mx-2"
             aria-label="PaperPilot AI home"
           >
             <PaperPilotLogo />
-          </a>
+          </Link>
           <NavigationMenu className="hidden md:flex">
             <NavigationMenuList>
               <NavigationMenuItem>
@@ -80,7 +80,7 @@ export function Header() {
                   Product
                 </NavigationMenuTrigger>
                 <NavigationMenuContent className="bg-background p-1 pr-1.5">
-                  <ul className="bg-popover grid w-lg grid-cols-2 gap-2 rounded-md border p-2 shadow">
+                  <ul className="bg-popover grid w-[36rem] grid-cols-2 gap-2 rounded-md border p-2 shadow">
                     {productLinks.map((item, i) => (
                       <li key={i}>
                         <ListItem {...item} />
@@ -105,7 +105,7 @@ export function Header() {
                   Resources
                 </NavigationMenuTrigger>
                 <NavigationMenuContent className="bg-background p-1 pr-1.5 pb-1.5">
-                  <div className="grid w-lg grid-cols-2 gap-2">
+                  <div className="grid w-[36rem] grid-cols-2 gap-2">
                     <ul className="bg-popover space-y-2 rounded-md border p-2 shadow">
                       {resourceLinks.map((item, i) => (
                         <li key={i}>
@@ -155,68 +155,46 @@ export function Header() {
           </Button>
         </div>
       </nav>
-      <MobileMenu
-        open={open}
-        className="flex flex-col justify-between gap-2 overflow-y-auto"
-      >
-        <NavigationMenu className="max-w-full">
-          <div className="flex w-full flex-col gap-y-2">
-            <span className="text-sm text-muted-foreground">Product</span>
-            {productLinks.map((link) => (
-              <ListItem key={link.title} {...link} />
-            ))}
-            <span className="text-sm text-muted-foreground pt-2">
-              Resources
-            </span>
-            {resourceLinks.map((link) => (
-              <ListItem key={link.title} {...link} />
-            ))}
-            {legalLinks.map((link) => (
-              <ListItem key={link.title} {...link} />
-            ))}
+      {open ? (
+        <div
+          id="mobile-menu"
+          className={cn(
+            "bg-background/95 supports-[backdrop-filter]:bg-background/60 backdrop-blur-lg",
+            "fixed top-14 right-0 bottom-0 left-0 z-40 flex flex-col border-y md:hidden",
+            "animate-in fade-in-0 duration-200 ease-out",
+          )}
+          onClick={(e) => {
+            // Close when a nav link inside the menu is tapped, so users land on
+            // the destination page without a stale overlay covering it.
+            const target = e.target as HTMLElement;
+            if (target.closest("a")) setOpen(false);
+          }}
+        >
+          <div className="flex size-full flex-col justify-between gap-2 overflow-y-auto p-4">
+            <NavigationMenu className="max-w-full">
+              <div className="flex w-full flex-col gap-y-2">
+                <span className="text-sm text-muted-foreground">Product</span>
+                {productLinks.map((link) => (
+                  <ListItem key={link.title} {...link} />
+                ))}
+                <span className="text-sm text-muted-foreground pt-2">
+                  Resources
+                </span>
+                {resourceLinks.map((link) => (
+                  <ListItem key={link.title} {...link} />
+                ))}
+                {legalLinks.map((link) => (
+                  <ListItem key={link.title} {...link} />
+                ))}
+              </div>
+            </NavigationMenu>
+            <div className="flex flex-col gap-2">
+              <AuthMenu layout="stacked" />
+            </div>
           </div>
-        </NavigationMenu>
-        <div className="flex flex-col gap-2">
-          <AuthMenu layout="stacked" />
         </div>
-      </MobileMenu>
+      ) : null}
     </header>
-  );
-}
-
-type MobileMenuProps = React.ComponentProps<"div"> & {
-  open: boolean;
-};
-
-function MobileMenu({ open, children, className, ...props }: MobileMenuProps) {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!open || !mounted || typeof window === "undefined") return null;
-
-  return createPortal(
-    <div
-      id="mobile-menu"
-      className={cn(
-        "bg-background/95 supports-[backdrop-filter]:bg-background/60 backdrop-blur-lg",
-        "fixed top-14 right-0 bottom-0 left-0 z-40 flex flex-col overflow-hidden border-y md:hidden",
-      )}
-    >
-      <div
-        data-slot={open ? "open" : "closed"}
-        className={cn(
-          "data-[slot=open]:animate-in data-[slot=open]:zoom-in-97 ease-out",
-          "size-full p-4",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </div>
-    </div>,
-    document.body,
   );
 }
 
@@ -254,15 +232,15 @@ function ListItem({
 
 const productLinks: LinkItem[] = [
   {
-    title: "Compliance Engine",
+    title: "Bot-Score Engine",
     href: "#",
-    description: "Deterministic 0–100 score against your declared policy",
+    description: "Deterministic 0–100 bot score against your declared policy",
     icon: ShieldCheckIcon,
   },
   {
     title: "Behavior Dashboard",
     href: "#",
-    description: "Score sparkline, top violations, and audit history",
+    description: "Bot-score sparkline, top violations, and audit history",
     icon: BarChart3Icon,
   },
   {

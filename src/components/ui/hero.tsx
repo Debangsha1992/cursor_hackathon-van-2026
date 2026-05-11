@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 export function HeroSection() {
   return (
-    <section className="relative mx-auto w-full max-w-5xl overflow-hidden pt-16">
+    <section className="relative mx-auto w-full max-w-5xl overflow-hidden px-4 pt-16 sm:px-6 lg:px-8">
       {/* Ambient shades */}
       <div
         aria-hidden="true"
@@ -32,10 +32,10 @@ export function HeroSection() {
         />
       </div>
 
-      <div className="relative z-10 flex max-w-2xl flex-col gap-5 px-4">
+      <div className="relative z-10 flex max-w-2xl flex-col gap-5">
         <a
           className={cn(
-            "group flex w-fit items-center gap-3 rounded-sm border bg-card p-1 shadow-xs",
+            "group flex w-fit max-w-full flex-wrap items-center gap-2 rounded-sm border bg-card p-1 shadow-xs sm:flex-nowrap sm:gap-3",
             "fade-in slide-in-from-bottom-10 animate-in fill-mode-backwards transition-all delay-500 duration-500 ease-out",
           )}
           href="#link"
@@ -44,19 +44,19 @@ export function HeroSection() {
             <p className="font-mono text-xs">NEW</p>
           </div>
 
-          <span className="text-xs">
+          <span className="min-w-0 text-xs">
             paper-trading audits for AI agents — no live execution
           </span>
-          <span className="block h-5 border-l" />
+          <span className="hidden h-5 border-l sm:block" />
 
-          <div className="pr-1">
+          <div className="hidden pr-1 sm:block">
             <ArrowRightIcon className="size-3 -translate-x-0.5 duration-150 ease-out group-hover:translate-x-0.5" />
           </div>
         </a>
 
         <h1
           className={cn(
-            "text-balance font-semibold text-4xl text-foreground leading-tight md:text-5xl tracking-tight",
+            "text-balance font-semibold text-3xl sm:text-4xl text-foreground leading-tight md:text-5xl tracking-tight",
             "fade-in slide-in-from-bottom-10 animate-in fill-mode-backwards delay-100 duration-500 ease-out",
           )}
         >
@@ -71,13 +71,13 @@ export function HeroSection() {
           )}
         >
           PaperPilot AI is a behavior-audit and discipline-coach environment for
-          AI trading agents. Submit paper trades, get a deterministic compliance
-          score, explicit violation codes, and a persistent audit trail —
+          AI trading agents. Submit paper trades, get a deterministic bot score,
+          explicit violation codes, and a persistent audit trail —
           <br className="hidden md:inline" />
           never a green-light to deploy.
         </p>
 
-        <div className="fade-in slide-in-from-bottom-10 flex w-fit animate-in items-center justify-center gap-3 fill-mode-backwards pt-2 delay-300 duration-500 ease-out">
+        <div className="fade-in slide-in-from-bottom-10 flex w-full flex-col items-stretch gap-3 animate-in fill-mode-backwards pt-2 delay-300 duration-500 ease-out sm:w-fit sm:flex-row sm:items-center sm:justify-center">
           <Button variant="outline">
             <PlayIcon className="size-4 mr-2" data-icon="inline-start" />
             Watch demo
@@ -112,7 +112,7 @@ export function HeroSection() {
         />
         <div
           className={cn(
-            "relative mt-8 -mr-56 overflow-hidden px-2 sm:mt-12 sm:mr-0 md:mt-20",
+            "relative mt-8 overflow-hidden sm:mt-12 md:mt-20",
             "fade-in slide-in-from-bottom-5 animate-in fill-mode-backwards delay-100 duration-1000 ease-out",
           )}
           style={{
@@ -201,7 +201,7 @@ function DashboardMock() {
           {/* Top stat row */}
           <div className="grid grid-cols-3 gap-3">
             <StatCard
-              label="Compliance score"
+              label="Bot Score"
               value="64"
               hint="Notable gaps"
               valueClass="text-amber-600 dark:text-amber-400"

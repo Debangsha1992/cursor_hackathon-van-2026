@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  ArrowUpIcon,
   BotIcon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -10,18 +9,21 @@ import {
   UserIcon,
   WrenchIcon,
 } from "lucide-react";
+
+import { PromptInputBox } from "@/components/ui/ai-prompt-box";
 import { cn } from "@/lib/utils";
 
-// User-facing chat surface for the multi-agent stack:
+// AssistantRail — the right-hand chat column on /dashboard.
 //
-//   user --> Clōd (generic conversational layer, api.clod.io)
-//                |  consult_finance_expert(...)
-//                v
-//          Lightning AI vLLM (DragonLLM/Qwen-Open-Finance-R-8B)
+// Owns the multi-agent chat state (transcript, pending, errors, send()) and
+// renders it alongside the new `PromptInputBox` composer.
 //
-// The panel renders the user-visible transcript and, expandably, the
-// per-message agent trace so demo viewers can see when Clōd routed a
-// question to the finance expert.
+// Wire shape: POST /api/chat with { messages: [{role, content}, ...] }
+//
+// The PromptInputBox can attach files in its UI but the current /api/chat
+// route doesn't accept attachments, so the `files` argument is intentionally
+// dropped here. Image upload still works in the composer (preview, paste,
+// drag/drop) — the files just aren't transmitted yet.
 
 type Role = "user" | "assistant";
 
@@ -75,9 +77,8 @@ const STARTER_PROMPTS: string[] = [
   "Explain what BOT_STRATEGY_MISMATCH means and how to avoid it.",
 ];
 
-export function ChatPanel() {
+export function AssistantRail() {
   const [turns, setTurns] = React.useState<ChatTurn[]>([]);
-  const [draft, setDraft] = React.useState("");
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
@@ -87,78 +88,90 @@ export function ChatPanel() {
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [turns.length, pending]);
 
-  const send = async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed || pending) return;
-    setError(null);
-    const nextTurns: ChatTurn[] = [
-      ...turns,
-      { role: "user", content: trimmed },
-    ];
-    setTurns(nextTurns);
-    setDraft("");
-    setPending(true);
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          messages: nextTurns.map((t) => ({ role: t.role, content: t.content })),
-        }),
-      });
-      const data = (await res.json()) as ChatApiResponse | { error: string; details?: string };
-      if (!res.ok || "error" in data) {
-        const err =
-          "error" in data
-            ? `${data.error}${data.details ? `: ${data.details}` : ""}`
-            : `HTTP ${res.status}`;
-        setError(err);
-        return;
+  const send = React.useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || pending) return;
+      setError(null);
+      const nextTurns: ChatTurn[] = [
+        ...turns,
+        { role: "user", content: trimmed },
+      ];
+      setTurns(nextTurns);
+      setPending(true);
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            messages: nextTurns.map((t) => ({
+              role: t.role,
+              content: t.content,
+            })),
+          }),
+        });
+        const data = (await res.json()) as
+          | ChatApiResponse
+          | { error: string; details?: string };
+        if (!res.ok || "error" in data) {
+          const err =
+            "error" in data
+              ? `${data.error}${data.details ? `: ${data.details}` : ""}`
+              : `HTTP ${res.status}`;
+          setError(err);
+          return;
+        }
+        setTurns((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.reply,
+            steps: data.steps,
+            fallbackUsed: data.fallbackUsed,
+            toolCalls: data.toolCalls,
+            totalLatencyMs: data.totalLatencyMs,
+          },
+        ]);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "request failed");
+      } finally {
+        setPending(false);
       }
-      setTurns((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.reply,
-          steps: data.steps,
-          fallbackUsed: data.fallbackUsed,
-          toolCalls: data.toolCalls,
-          totalLatencyMs: data.totalLatencyMs,
-        },
-      ]);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "request failed");
-    } finally {
-      setPending(false);
-    }
-  };
+    },
+    [pending, turns],
+  );
 
   return (
-    <section className="rounded-lg border border-border bg-card">
-      <header className="flex items-center justify-between gap-3 border-b border-border/60 p-5">
+    <aside
+      className={cn(
+        "flex w-full flex-col gap-3 rounded-2xl border border-border bg-card p-4",
+        "lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)]",
+      )}
+    >
+      <header className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="flex size-8 items-center justify-center rounded-md border bg-background">
+          <div className="bg-background flex size-8 items-center justify-center rounded-md border">
             <SparklesIcon className="size-4 text-primary" />
           </div>
           <div>
-            <h3 className="text-sm font-medium">Multi-agent chat</h3>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              Clōd (generic conversational layer) reads your query and
-              consults the Lightning AI vLLM — a Pine Script &amp; trading-
-              strategy specialist — whenever real finance expertise is
-              required.
+            <h3 className="text-sm font-medium leading-none">
+              Multi-agent chat
+            </h3>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              Clōd routes Pine Script &amp; strategy questions to the Lightning
+              AI vLLM finance expert.
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        <span className="bg-background border-border text-muted-foreground inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[10px] uppercase tracking-wider">
           <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-          Clōd + vLLM
-        </div>
+          live
+        </span>
       </header>
 
       <div
         ref={scrollRef}
-        className="max-h-[480px] min-h-[280px] space-y-4 overflow-y-auto p-5"
+        className="flex-1 space-y-4 overflow-y-auto pr-1 lg:min-h-[280px]"
       >
         {turns.length === 0 ? (
           <EmptyState onPick={send} disabled={pending} />
@@ -167,46 +180,22 @@ export function ChatPanel() {
         )}
         {pending ? <PendingBubble /> : null}
         {error ? (
-          <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+          <p className="border-destructive/40 bg-destructive/5 text-destructive rounded-md border p-3 text-xs">
             {error}
           </p>
         ) : null}
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          send(draft);
+      <PromptInputBox
+        onSend={(message) => {
+          // `files` arg is currently dropped: /api/chat has no attachment
+          // schema yet. UI still accepts/previews images.
+          void send(message);
         }}
-        className="flex items-end gap-2 border-t border-border/60 p-3"
-      >
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              send(draft);
-            }
-          }}
-          rows={2}
-          placeholder="Ask about your Pine Script, your strategy idea, or PaperPilot itself…"
-          className="min-h-[44px] flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          disabled={pending}
-        />
-        <button
-          type="submit"
-          disabled={pending || draft.trim().length === 0}
-          className={cn(
-            "inline-flex h-10 items-center justify-center rounded-md border bg-primary px-3 text-sm font-medium text-primary-foreground transition-opacity",
-            (pending || draft.trim().length === 0) && "opacity-50"
-          )}
-          aria-label="Send"
-        >
-          <ArrowUpIcon className="size-4" />
-        </button>
-      </form>
-    </section>
+        isLoading={pending}
+        placeholder="Ask about your Pine Script, your strategy idea, or PaperPilot itself…"
+      />
+    </aside>
   );
 }
 
@@ -218,8 +207,8 @@ function EmptyState({
   disabled: boolean;
 }) {
   return (
-    <div className="space-y-4">
-      <p className="text-xs leading-relaxed text-muted-foreground">
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-xs leading-relaxed">
         Start with one of these, or paste your own Pine Script / strategy
         question:
       </p>
@@ -230,7 +219,7 @@ function EmptyState({
             type="button"
             disabled={disabled}
             onClick={() => onPick(p)}
-            className="rounded-md border border-border bg-background px-3 py-2 text-left text-xs leading-relaxed transition-colors hover:bg-accent disabled:opacity-50"
+            className="border-border bg-background hover:bg-accent rounded-md border px-3 py-2 text-left text-xs leading-relaxed transition-colors disabled:opacity-50"
           >
             {p}
           </button>
@@ -243,11 +232,11 @@ function EmptyState({
 function PendingBubble() {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-background">
+      <div className="bg-background flex size-7 shrink-0 items-center justify-center rounded-md border">
         <BotIcon className="size-3.5 text-primary" />
       </div>
-      <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-background/50 px-3 py-2 text-xs text-muted-foreground">
-        <span className="inline-block size-1.5 animate-pulse rounded-full bg-primary" />
+      <div className="border-border/60 bg-background/50 text-muted-foreground flex items-center gap-1.5 rounded-md border px-3 py-2 text-xs">
+        <span className="bg-primary inline-block size-1.5 animate-pulse rounded-full" />
         <span>Clōd is reasoning…</span>
       </div>
     </div>
@@ -258,13 +247,9 @@ function Bubble({ turn }: { turn: ChatTurn }) {
   const isUser = turn.role === "user";
   return (
     <div className={cn("flex items-start gap-3", isUser && "flex-row-reverse")}>
-      <div
-        className={cn(
-          "flex size-7 shrink-0 items-center justify-center rounded-md border bg-background"
-        )}
-      >
+      <div className="bg-background flex size-7 shrink-0 items-center justify-center rounded-md border">
         {isUser ? (
-          <UserIcon className="size-3.5 text-foreground" />
+          <UserIcon className="text-foreground size-3.5" />
         ) : (
           <BotIcon className="size-3.5 text-primary" />
         )}
@@ -275,7 +260,7 @@ function Bubble({ turn }: { turn: ChatTurn }) {
             "max-w-[88%] whitespace-pre-wrap rounded-md border px-3 py-2 text-sm leading-relaxed",
             isUser
               ? "border-primary/30 bg-primary/5"
-              : "border-border/60 bg-background/50"
+              : "border-border/60 bg-background/50",
           )}
         >
           {turn.content || (
@@ -309,11 +294,11 @@ function AgentTrace({
   const [open, setOpen] = React.useState(false);
   const summary = `${toolCalls} expert consultation${toolCalls === 1 ? "" : "s"} · ${Math.round(totalLatencyMs)}ms`;
   return (
-    <div className="mt-2 max-w-[88%] rounded-md border border-border/40 bg-muted/30 text-xs">
+    <div className="border-border/40 bg-muted/30 mt-2 max-w-[88%] rounded-md border text-xs">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-muted-foreground hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left"
       >
         {open ? (
           <ChevronDownIcon className="size-3" />
@@ -323,13 +308,13 @@ function AgentTrace({
         <span className="font-mono uppercase tracking-wider">trace</span>
         <span className="text-[10px]">{summary}</span>
         {fallbackUsed ? (
-          <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] normal-case">
+          <span className="bg-muted ml-auto rounded px-1.5 py-0.5 text-[10px] normal-case">
             fallback
           </span>
         ) : null}
       </button>
       {open ? (
-        <ol className="space-y-1.5 border-t border-border/40 p-2.5 font-mono">
+        <ol className="border-border/40 space-y-1.5 border-t p-2.5 font-mono">
           {steps.map((s, i) => (
             <li key={i} className="leading-relaxed">
               <StepLine step={s} />
@@ -346,7 +331,7 @@ function StepLine({ step }: { step: AgentStep }) {
     case "clod_reply":
       return (
         <span className="flex items-baseline gap-1.5">
-          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase text-primary">
+          <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] uppercase">
             clod
           </span>
           <span className="text-muted-foreground">
@@ -358,10 +343,10 @@ function StepLine({ step }: { step: AgentStep }) {
     case "clod_tool_call":
       return (
         <span className="flex items-baseline gap-1.5">
-          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase text-primary">
+          <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] uppercase">
             clod
           </span>
-          <WrenchIcon className="size-3 text-muted-foreground" />
+          <WrenchIcon className="text-muted-foreground size-3" />
           <span className="text-muted-foreground">
             call <span className="text-foreground">{step.tool}</span>(
             <span className="text-[10px]">
@@ -383,7 +368,7 @@ function StepLine({ step }: { step: AgentStep }) {
               {step.totalTokens} tokens
             </span>
           </span>
-          <span className="ml-1 mt-1 block whitespace-pre-wrap font-sans text-[11px] text-muted-foreground">
+          <span className="text-muted-foreground ml-1 mt-1 block whitespace-pre-wrap font-sans text-[11px]">
             {truncate(step.analysis, 360)}
           </span>
         </span>

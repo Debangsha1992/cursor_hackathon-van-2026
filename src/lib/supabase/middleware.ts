@@ -3,6 +3,11 @@ import { createServerClient } from "@supabase/ssr";
 
 import { getSupabasePublishableKey, getSupabaseUrl } from "./env";
 
+// Paths that require an authenticated user. Unauthenticated requests get
+// redirected to /login with ?next= preserved so post-login they land back
+// where they were trying to go. Add new private prefixes here.
+const PROTECTED_PREFIXES = ["/dashboard"];
+
 // Runs on every matched request. Refreshes the user's Supabase auth session
 // (rotating short-lived JWTs) and pipes the updated cookies onto the
 // response. Without this, server components see stale or expired sessions
@@ -36,7 +41,22 @@ export async function updateSupabaseSession(
   // IMPORTANT: getUser() forces a token refresh if needed. Do not skip it,
   // and do not run other code between createServerClient and getUser() — see
   // https://supabase.com/docs/guides/auth/server-side/nextjs.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+  const isProtected = PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+
+  if (!user && isProtected) {
+    const loginUrl = request.nextUrl.clone();
+    const originalPath = pathname + request.nextUrl.search;
+    loginUrl.pathname = "/login";
+    loginUrl.search = `?next=${encodeURIComponent(originalPath)}`;
+    return NextResponse.redirect(loginUrl);
+  }
 
   return response;
 }
