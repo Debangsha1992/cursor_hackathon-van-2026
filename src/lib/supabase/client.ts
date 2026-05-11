@@ -11,3 +11,9 @@ import { getSupabasePublishableKey, getSupabaseUrl } from "./env";
 export function createSupabaseBrowserClient() {
   return createBrowserClient(getSupabaseUrl(), getSupabasePublishableKey());
 }
+
+// Alias matching the Supabase Next.js starter convention. Auth components
+// generated from that template import `createClient` from this module, so
+// re-exporting the browser factory under that name keeps both naming styles
+// working.
+export const createClient = createSupabaseBrowserClient;

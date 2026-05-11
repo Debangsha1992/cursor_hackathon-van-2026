@@ -28,3 +28,13 @@ export function getSupabasePublishableKey(): string {
 export function getSupabaseSecretKey(): string {
   return required("SUPABASE_SECRET_KEY", process.env.SUPABASE_SECRET_KEY);
 }
+
+// Non-throwing probe used by client components to render a "Supabase not
+// configured" banner instead of crashing the whole tree when env vars are
+// missing in a preview build.
+export function hasSupabaseEnv(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  );
+}
