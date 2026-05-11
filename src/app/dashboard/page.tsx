@@ -1,5 +1,6 @@
 import { Header } from "@/components/ui/header";
 import { MarketPanel } from "@/components/dashboard/market-panel";
+import { ChatPanel } from "@/components/dashboard/chat-panel";
 
 export const metadata = {
   title: "Dashboard — PaperPilot AI",
@@ -30,14 +31,18 @@ export default function DashboardPage() {
 
           <MarketPanel />
 
+          <div className="mt-12">
+            <ChatPanel />
+          </div>
+
           <section className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3 text-sm">
+            <ArchitectureBeat
+              title="Multi-agent LLM stack"
+              body="Clōd (api.clod.io, OpenAI-compatible) is the generic conversational layer; Lightning AI vLLM (DragonLLM/Qwen-Open-Finance-R-8B) is the Pine Script & strategy expert, consulted as a tool."
+            />
             <ArchitectureBeat
               title="A2A v1.0 wire"
               body="JSON-RPC at /api/a2a, SSE at /api/a2a/stream/:taskId, agent card at /.well-known/agent-card.json. HMAC-signed envelopes."
-            />
-            <ArchitectureBeat
-              title="LangGraph orchestrator"
-              body="One stateful graph per task. Interrupt at the clarify node maps to TASK_STATE_INPUT_REQUIRED; checkpointer makes resume cheap."
             />
             <ArchitectureBeat
               title="Citation guardrail"

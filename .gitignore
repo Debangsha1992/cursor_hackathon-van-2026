@@ -38,6 +38,13 @@ yarn-error.log*
 # editor
 .idea
 .vscode
+.cursor/
 
 # OS files
 Thumbs.db
+
+# supabase CLI scratch
+supabase/.temp/
+
+# local source PDFs/ebooks (often copyrighted)
+*.pdf

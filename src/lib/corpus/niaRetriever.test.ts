@@ -81,6 +81,8 @@ describe("niaRetriever - source filtering and topK", () => {
       niaClient: client,
     });
 
+    // primary template begins with strategyType; fallback also includes it,
+    // but only the fallback omits the "Market regime:" framing.
     expect(result.queryUsed).not.toContain("Market regime");
     expect(result.queryUsed).toContain("trend_following");
   });

@@ -1,0 +1,51 @@
+//@version=5
+// =============================================================================
+// PaperPilot range-trading template
+// Strategy: Buy near pivot support, sell near pivot resistance. Skips signals
+// when ADX > threshold so we don't fade strong trends. Stops sit outside the
+// pivot; target is the opposite pivot.
+// =============================================================================
+strategy("PaperPilot range-trading", overlay = true,
+     default_qty_type = strategy.percent_of_equity, default_qty_value = 5)
+
+// --- Inputs ----------------------------------------------------------------
+pivotLen  = input.int(10,  "Pivot lookback", minval = 2)
+adxLen    = input.int(14,  "ADX length",     minval = 2)
+adxMax    = input.float(20.0, "Skip if ADX >", minval = 1.0, step = 0.5)
+stopBufPct= input.float(0.3, "Stop buffer % beyond pivot", minval = 0.0, step = 0.05)
+
+// --- Signal ----------------------------------------------------------------
+ph = ta.pivothigh(high, pivotLen, pivotLen)
+pl = ta.pivotlow(low,  pivotLen, pivotLen)
+
+var float lastSupport    = na
+var float lastResistance = na
+if not na(ph)
+    lastResistance := ph
+if not na(pl)
+    lastSupport := pl
+
+[diPlus, diMinus, adx] = ta.dmi(adxLen, adxLen)
+ranging = adx < adxMax
+
+longCondition  = ranging and not na(lastSupport)    and close <= lastSupport
+shortCondition = ranging and not na(lastResistance) and close >= lastResistance
+
+// --- Risk discipline -------------------------------------------------------
+var float stopLossPrice   = na
+var float takeProfitPrice = na
+
+if longCondition
+    stopLossPrice   := lastSupport * (1.0 - stopBufPct / 100.0)
+    takeProfitPrice := lastResistance
+    strategy.entry("long", strategy.long,
+         alert_message = "Price at range support with ADX low; mean-revert long")
+
+if shortCondition
+    stopLossPrice   := lastResistance * (1.0 + stopBufPct / 100.0)
+    takeProfitPrice := lastSupport
+    strategy.entry("short", strategy.short,
+         alert_message = "Price at range resistance with ADX low; mean-revert short")
+
+plot(stopLossPrice,   "stopLoss",   color = color.new(color.red, 100))   // {{plot_0}}
+plot(takeProfitPrice, "takeProfit", color = color.new(color.green, 100)) // {{plot_1}}

@@ -37,6 +37,7 @@ describe("backtester - golden test", () => {
     expect(result.summary.winRate).toBeLessThanOrEqual(1);
     expect(Array.isArray(result.violations)).toBe(true);
 
+    // Snapshot the high-level numeric output for regression detection.
     expect({
       tradesCount: result.trades.length,
       totalReturn: Number(result.summary.totalReturn.toFixed(4)),

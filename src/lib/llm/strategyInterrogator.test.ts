@@ -141,6 +141,7 @@ describe("interrogateAgent — multi-round and fallback", () => {
   });
 
   it("returns a deterministic fallback summary when even the trailing finish-call fails", async () => {
+    // 3 unparseable LLM calls in a row: rounds 0, 1, plus the post-loop forced-finish call.
     const llm = scriptedLlm(["nope.", "nope.", "still nope."]);
     const sender = fixedSender(["a", "b"]);
 

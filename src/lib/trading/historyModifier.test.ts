@@ -11,6 +11,7 @@ const v = (code: string): RuleViolation => ({
 describe("historyModifier - tracer", () => {
   it("returns modifier 0 and empty recurringCodes for an empty history", () => {
     const result = computeHistoryModifier([]);
+
     expect(result.modifier).toBe(0);
     expect(result.recurringCodes).toEqual([]);
   });
@@ -19,7 +20,9 @@ describe("historyModifier - tracer", () => {
 describe("historyModifier - recurrence threshold", () => {
   it("returns modifier 0 when a code occurs only twice", () => {
     const history = [v("BOT_NO_STOP_LOSS"), v("BOT_NO_STOP_LOSS")];
+
     const result = computeHistoryModifier(history);
+
     expect(result.modifier).toBe(0);
     expect(result.recurringCodes).toEqual([]);
   });
@@ -30,14 +33,18 @@ describe("historyModifier - recurrence threshold", () => {
       v("BOT_NO_STOP_LOSS"),
       v("BOT_NO_STOP_LOSS"),
     ];
+
     const result = computeHistoryModifier(history);
+
     expect(result.modifier).toBe(-10);
     expect(result.recurringCodes).toContain("BOT_NO_STOP_LOSS");
   });
 
   it("caps modifier at -10 when a code occurs five times", () => {
     const history = Array.from({ length: 5 }, () => v("BOT_OVERTRADING"));
+
     const result = computeHistoryModifier(history);
+
     expect(result.modifier).toBe(-10);
   });
 
@@ -50,7 +57,9 @@ describe("historyModifier - recurrence threshold", () => {
       v("BOT_OVERCONFIDENCE"),
       v("BOT_OVERCONFIDENCE"),
     ];
+
     const result = computeHistoryModifier(history);
+
     expect(result.modifier).toBe(-10);
     expect(result.recurringCodes).toContain("BOT_NO_STOP_LOSS");
     expect(result.recurringCodes).toContain("BOT_OVERCONFIDENCE");

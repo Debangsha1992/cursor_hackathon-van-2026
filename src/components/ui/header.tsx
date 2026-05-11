@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/navigation-menu";
 import { PaperPilotLogo } from "@/components/ui/paperpilot-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { AuthMenu } from "@/components/ui/auth-menu";
 import { cn } from "@/lib/utils";
 
 type LinkItem = {
@@ -138,8 +139,7 @@ export function Header() {
         </div>
         <div className="hidden items-center gap-2 md:flex">
           <ThemeToggle />
-          <Button variant="outline">Sign In</Button>
-          <Button>Register a bot</Button>
+          <AuthMenu />
         </div>
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
@@ -177,10 +177,7 @@ export function Header() {
           </div>
         </NavigationMenu>
         <div className="flex flex-col gap-2">
-          <Button variant="outline" className="w-full bg-transparent">
-            Sign In
-          </Button>
-          <Button className="w-full">Register a bot</Button>
+          <AuthMenu layout="stacked" />
         </div>
       </MobileMenu>
     </header>
