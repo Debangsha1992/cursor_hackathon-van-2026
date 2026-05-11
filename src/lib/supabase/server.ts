@@ -32,6 +32,12 @@ export async function createSupabaseServerClient() {
   });
 }
 
+// Alias matching the Supabase Next.js starter convention. Route handlers
+// generated from that template (e.g. `app/auth/confirm/route.ts`) import
+// `createClient` from this module; re-exporting under that name keeps both
+// naming styles working without churning every call site.
+export const createClient = createSupabaseServerClient;
+
 // Privileged server-only client that bypasses RLS. Use ONLY for trusted
 // server paths (e.g. the HMAC-authenticated A2A route, where the caller has
 // already been verified by signature, or background jobs). Never expose this
