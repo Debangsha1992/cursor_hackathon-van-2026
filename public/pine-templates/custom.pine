@@ -1,0 +1,42 @@
+//@version=5
+// =============================================================================
+// PaperPilot custom-strategy starter
+// A minimal scaffold. You bring the signal logic; PaperPilot only requires
+// that you (1) call strategy.entry() to fire the alert, (2) plot stopLoss
+// on plot_0 and takeProfit on plot_1 so {{plot_0}} / {{plot_1}} in your
+// alert message body get substituted, and (3) pass a meaningful
+// `alert_message` so the rule engine sees a substantive signalReason.
+//
+// Profile `strategyType` is "custom" for this template, which disables the
+// BOT_STRATEGY_MISMATCH check entirely.
+// =============================================================================
+strategy("PaperPilot custom starter", overlay = true,
+     default_qty_type = strategy.percent_of_equity, default_qty_value = 5)
+
+// --- Replace this with your real signal logic ------------------------------
+slPct   = input.float(2.0, "Stop loss %",   minval = 0.1, step = 0.1)
+tpPct   = input.float(4.0, "Take profit %", minval = 0.1, step = 0.1)
+fakeLen = input.int(20, "Demo SMA length", minval = 2)
+
+sma     = ta.sma(close, fakeLen)
+longCondition  = ta.crossover(close, sma)
+shortCondition = ta.crossunder(close, sma)
+
+// --- Risk discipline (mandatory plumbing) ----------------------------------
+var float stopLossPrice   = na
+var float takeProfitPrice = na
+
+if longCondition
+    stopLossPrice   := close * (1.0 - slPct / 100.0)
+    takeProfitPrice := close * (1.0 + tpPct / 100.0)
+    strategy.entry("long", strategy.long,
+         alert_message = "Describe what produced this signal here")
+
+if shortCondition
+    stopLossPrice   := close * (1.0 + slPct / 100.0)
+    takeProfitPrice := close * (1.0 - tpPct / 100.0)
+    strategy.entry("short", strategy.short,
+         alert_message = "Describe what produced this signal here")
+
+plot(stopLossPrice,   "stopLoss",   color = color.new(color.red, 100))   // {{plot_0}}
+plot(takeProfitPrice, "takeProfit", color = color.new(color.green, 100)) // {{plot_1}}

@@ -41,13 +41,19 @@ describe("splitReasoning", () => {
   });
 });
 
+function env(o: Record<string, string>): NodeJS.ProcessEnv {
+  return o as unknown as NodeJS.ProcessEnv;
+}
+
 describe("loadVllmConfigFromEnv", () => {
   it("loads config from env and trims trailing slash on base URL", () => {
-    const config = loadVllmConfigFromEnv({
-      OPENAI_API_BASE: "https://example.com/v1/",
-      OPENAI_API_KEY: "token-abc123",
-      OPENAI_MODEL: "DragonLLM/Qwen-Open-Finance-R-8B",
-    } as NodeJS.ProcessEnv);
+    const config = loadVllmConfigFromEnv(
+      env({
+        OPENAI_API_BASE: "https://example.com/v1/",
+        OPENAI_API_KEY: "token-abc123",
+        OPENAI_MODEL: "DragonLLM/Qwen-Open-Finance-R-8B",
+      })
+    );
     expect(config.baseUrl).toBe("https://example.com/v1");
     expect(config.apiKey).toBe("token-abc123");
     expect(config.model).toBe("DragonLLM/Qwen-Open-Finance-R-8B");
@@ -55,22 +61,13 @@ describe("loadVllmConfigFromEnv", () => {
 
   it("throws a VllmClientError when any required var is missing", () => {
     expect(() =>
-      loadVllmConfigFromEnv({
-        OPENAI_API_KEY: "x",
-        OPENAI_MODEL: "y",
-      } as NodeJS.ProcessEnv)
+      loadVllmConfigFromEnv(env({ OPENAI_API_KEY: "x", OPENAI_MODEL: "y" }))
     ).toThrow(VllmClientError);
     expect(() =>
-      loadVllmConfigFromEnv({
-        OPENAI_API_BASE: "x",
-        OPENAI_MODEL: "y",
-      } as NodeJS.ProcessEnv)
+      loadVllmConfigFromEnv(env({ OPENAI_API_BASE: "x", OPENAI_MODEL: "y" }))
     ).toThrow(VllmClientError);
     expect(() =>
-      loadVllmConfigFromEnv({
-        OPENAI_API_BASE: "x",
-        OPENAI_API_KEY: "y",
-      } as NodeJS.ProcessEnv)
+      loadVllmConfigFromEnv(env({ OPENAI_API_BASE: "x", OPENAI_API_KEY: "y" }))
     ).toThrow(VllmClientError);
   });
 });

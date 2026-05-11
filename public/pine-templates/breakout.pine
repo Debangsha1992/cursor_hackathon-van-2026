@@ -1,0 +1,42 @@
+//@version=5
+// =============================================================================
+// PaperPilot breakout template
+// Strategy: Donchian channel breakout with ATR-based stop sizing.
+// Enters on a new N-bar high (long) or low (short); stop is N ATRs against,
+// target is M ATRs in favor (M >= 1.5 * N to clear BOT_POOR_RISK_REWARD).
+// =============================================================================
+strategy("PaperPilot breakout", overlay = true,
+     default_qty_type = strategy.percent_of_equity, default_qty_value = 5)
+
+// --- Inputs ----------------------------------------------------------------
+chanLen   = input.int(20, "Donchian channel length", minval = 5)
+atrLen    = input.int(14, "ATR length", minval = 2)
+atrStopK  = input.float(1.5, "Stop = N * ATR", minval = 0.5, step = 0.1)
+atrTpK    = input.float(3.0, "Target = M * ATR", minval = 0.5, step = 0.1)
+
+// --- Signal ----------------------------------------------------------------
+hi      = ta.highest(high, chanLen)[1]
+lo      = ta.lowest(low, chanLen)[1]
+atr     = ta.atr(atrLen)
+
+longCondition  = close > hi
+shortCondition = close < lo
+
+// --- Risk discipline -------------------------------------------------------
+var float stopLossPrice   = na
+var float takeProfitPrice = na
+
+if longCondition
+    stopLossPrice   := close - atr * atrStopK
+    takeProfitPrice := close + atr * atrTpK
+    strategy.entry("long", strategy.long,
+         alert_message = "Close above " + str.tostring(chanLen) + "-bar high; breakout long")
+
+if shortCondition
+    stopLossPrice   := close + atr * atrStopK
+    takeProfitPrice := close - atr * atrTpK
+    strategy.entry("short", strategy.short,
+         alert_message = "Close below " + str.tostring(chanLen) + "-bar low; breakout short")
+
+plot(stopLossPrice,   "stopLoss",   color = color.new(color.red, 100))   // {{plot_0}}
+plot(takeProfitPrice, "takeProfit", color = color.new(color.green, 100)) // {{plot_1}}

@@ -1,0 +1,47 @@
+//@version=5
+// =============================================================================
+// PaperPilot trend-following template
+// Strategy: EMA crossover with a higher-timeframe trend filter.
+// Audits cleanly against PaperPilot's rule engine: emits stopLoss / takeProfit
+// on the right plot indices, includes a substantive signalReason, and stamps
+// strategyType="trend_following" on every alert.
+// =============================================================================
+strategy("PaperPilot trend-following", overlay = true,
+     default_qty_type = strategy.percent_of_equity, default_qty_value = 5)
+
+// --- Inputs ----------------------------------------------------------------
+fastLen   = input.int(20, "Fast EMA length",  minval = 2)
+slowLen   = input.int(50, "Slow EMA length",  minval = 5)
+htfTrend  = input.timeframe("60", "Higher-timeframe trend filter")
+slPct     = input.float(2.0, "Stop loss %",     minval = 0.1, step = 0.1)
+tpPct     = input.float(4.0, "Take profit %",   minval = 0.1, step = 0.1)
+
+// --- Signal ----------------------------------------------------------------
+fast    = ta.ema(close, fastLen)
+slow    = ta.ema(close, slowLen)
+htfEma  = request.security(syminfo.tickerid, htfTrend, ta.ema(close, slowLen))
+trendUp = close > htfEma
+
+longCondition  = ta.crossover(fast, slow)  and trendUp
+shortCondition = ta.crossunder(fast, slow) and not trendUp
+
+// --- Risk discipline (REQUIRED for clean PaperPilot audits) ----------------
+// PaperPilot reads {{plot_0}} as stopLoss and {{plot_1}} as takeProfit. We
+// plot them on hidden series so the alert message has values to interpolate.
+var float stopLossPrice   = na
+var float takeProfitPrice = na
+
+if longCondition
+    stopLossPrice   := close * (1.0 - slPct / 100.0)
+    takeProfitPrice := close * (1.0 + tpPct / 100.0)
+    strategy.entry("long", strategy.long,
+         alert_message = "Fast EMA crossed above slow EMA with HTF trend up")
+
+if shortCondition
+    stopLossPrice   := close * (1.0 + slPct / 100.0)
+    takeProfitPrice := close * (1.0 - tpPct / 100.0)
+    strategy.entry("short", strategy.short,
+         alert_message = "Fast EMA crossed below slow EMA with HTF trend down")
+
+plot(stopLossPrice,   "stopLoss",   color = color.new(color.red, 100))   // {{plot_0}}
+plot(takeProfitPrice, "takeProfit", color = color.new(color.green, 100)) // {{plot_1}}

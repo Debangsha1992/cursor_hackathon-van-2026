@@ -24,6 +24,7 @@ const validBody = (overrides: Record<string, unknown> = {}) =>
 describe("tradingViewAdapter - tracer", () => {
   it("parses a valid alert and stamps source + trust_tier", () => {
     const result = parseTradingViewAlert(validBody(), SECRET);
+
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.trade.source).toBe("tradingview_webhook");
@@ -36,6 +37,7 @@ describe("tradingViewAdapter - tracer", () => {
 describe("tradingViewAdapter - failure modes", () => {
   it("returns 'invalid_secret' when the webhook secret does not match", () => {
     const result = parseTradingViewAlert(validBody(), "wrong-secret");
+
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBe("invalid_secret");
   });
@@ -49,13 +51,16 @@ describe("tradingViewAdapter - failure modes", () => {
       quantity: 0.01,
       strategyType: "trend_following",
     });
+
     const result = parseTradingViewAlert(incomplete, SECRET);
+
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBe("malformed");
   });
 
   it("returns 'malformed' when JSON is invalid", () => {
     const result = parseTradingViewAlert("{ this is not json }", SECRET);
+
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBe("malformed");
   });
@@ -65,6 +70,7 @@ describe("tradingViewAdapter - failure modes", () => {
       validBody({ entryPrice: -100 }),
       SECRET
     );
+
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBe("invalid_value");
   });

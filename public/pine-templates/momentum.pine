@@ -1,0 +1,44 @@
+//@version=5
+// =============================================================================
+// PaperPilot momentum template
+// Strategy: Rate-of-change cross of a threshold with MACD histogram
+// agreement. Stops on a fixed percent against; target uses a trailing
+// concept enforced via a fixed take-profit so the rule engine sees both.
+// =============================================================================
+strategy("PaperPilot momentum", overlay = true,
+     default_qty_type = strategy.percent_of_equity, default_qty_value = 5)
+
+// --- Inputs ----------------------------------------------------------------
+rocLen     = input.int(10,  "ROC length",     minval = 2)
+rocThresh  = input.float(2.0, "ROC threshold %", minval = 0.1, step = 0.1)
+macdFast   = input.int(12,  "MACD fast",      minval = 2)
+macdSlow   = input.int(26,  "MACD slow",      minval = 5)
+macdSignal = input.int(9,   "MACD signal",    minval = 2)
+slPct      = input.float(2.0, "Stop loss %",   minval = 0.1, step = 0.1)
+tpPct      = input.float(5.0, "Take profit %", minval = 0.1, step = 0.1)
+
+// --- Signal ----------------------------------------------------------------
+roc = ta.roc(close, rocLen)
+[_macd, _signal, hist] = ta.macd(close, macdFast, macdSlow, macdSignal)
+
+longCondition  = roc > rocThresh and hist > 0 and hist[1] <= 0
+shortCondition = roc < -rocThresh and hist < 0 and hist[1] >= 0
+
+// --- Risk discipline -------------------------------------------------------
+var float stopLossPrice   = na
+var float takeProfitPrice = na
+
+if longCondition
+    stopLossPrice   := close * (1.0 - slPct / 100.0)
+    takeProfitPrice := close * (1.0 + tpPct / 100.0)
+    strategy.entry("long", strategy.long,
+         alert_message = "ROC and MACD histogram both positive; momentum long")
+
+if shortCondition
+    stopLossPrice   := close * (1.0 + slPct / 100.0)
+    takeProfitPrice := close * (1.0 - tpPct / 100.0)
+    strategy.entry("short", strategy.short,
+         alert_message = "ROC and MACD histogram both negative; momentum short")
+
+plot(stopLossPrice,   "stopLoss",   color = color.new(color.red, 100))   // {{plot_0}}
+plot(takeProfitPrice, "takeProfit", color = color.new(color.green, 100)) // {{plot_1}}

@@ -87,7 +87,7 @@ export async function verifyBotRequest(
 // `<timestamp>.<raw-body>` signature primitive — the entire raw JSON-RPC body
 // is what gets signed and what HMAC validates — but require the embedded
 // botId (when present) to match the `X-PaperPilot-Bot-Id` header so a stolen
-// header can't be replayed against an envelope that names a different bot.
+// header can't be replayed against a different identity in the envelope.
 export interface VerifyEnvelopeInput extends VerifyInput {
   embeddedBotId?: string | null;
 }

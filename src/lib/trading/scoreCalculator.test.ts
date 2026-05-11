@@ -11,6 +11,7 @@ const v = (code: string, severity: RuleViolation["severity"] = "medium"): RuleVi
 describe("scoreCalculator - tracer", () => {
   it("returns score 100 and band 'Exemplary' when there are no violations", () => {
     const result = calculateScore([]);
+
     expect(result.score).toBe(100);
     expect(result.band).toBe("Exemplary");
   });
@@ -71,11 +72,13 @@ describe("scoreCalculator - floor and ceiling", () => {
       v("BOT_OVERTRADING", "high"),
     ];
     const result = calculateScore(violations, -10);
+
     expect(result.score).toBeGreaterThanOrEqual(0);
     expect(result.band).toBe("Severe");
   });
 
   it("never returns a score above 100", () => {
+    // Pass an impossible positive history modifier; our cap clamps it to 0.
     const result = calculateScore([], 50);
     expect(result.score).toBeLessThanOrEqual(100);
   });
@@ -89,6 +92,7 @@ describe("scoreCalculator - band boundaries", () => {
   });
 
   it("classifies score 75 as Solid (lower boundary)", () => {
+    // Score = 100 - 12 (NO_SL) - 8 (POOR_RR) - 6 (OVERCONF) = 74
     const result = calculateScore([
       v("BOT_NO_STOP_LOSS", "high"),
       v("BOT_POOR_RISK_REWARD"),
@@ -99,6 +103,7 @@ describe("scoreCalculator - band boundaries", () => {
   });
 
   it("classifies score 60 as Notable gaps (lower boundary)", () => {
+    // 100 - 12 - 8 - 12 - 8 = 60
     const result = calculateScore([
       v("BOT_NO_STOP_LOSS", "high"),
       v("BOT_POOR_RISK_REWARD"),
@@ -110,6 +115,7 @@ describe("scoreCalculator - band boundaries", () => {
   });
 
   it("classifies score 39 as Severe", () => {
+    // 100 - 12 - 8 - 12 - 8 - 6 - 15 = 39
     const result = calculateScore([
       v("BOT_NO_STOP_LOSS", "high"),
       v("BOT_POOR_RISK_REWARD"),
